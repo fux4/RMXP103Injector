@@ -1,0 +1,26 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 11.00
+# Visual Studio 2010
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "RPGMakerXP-Injector", "RPGMakerXP-Injector\RPGMakerXP-Injector.vcxproj", "{8744CDBD-250C-4DD8-B22E-5248977C87F7}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "RMInject", "RMInject\RMInject.vcxproj", "{AE145A93-779B-420B-9DC1-1CEFB81C4938}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Win32 = Debug|Win32
+		Release|Win32 = Release|Win32
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{8744CDBD-250C-4DD8-B22E-5248977C87F7}.Debug|Win32.ActiveCfg = Debug|Win32
+		{8744CDBD-250C-4DD8-B22E-5248977C87F7}.Debug|Win32.Build.0 = Debug|Win32
+		{8744CDBD-250C-4DD8-B22E-5248977C87F7}.Release|Win32.ActiveCfg = Release|Win32
+		{8744CDBD-250C-4DD8-B22E-5248977C87F7}.Release|Win32.Build.0 = Release|Win32
+		{AE145A93-779B-420B-9DC1-1CEFB81C4938}.Debug|Win32.ActiveCfg = Debug|Win32
+		{AE145A93-779B-420B-9DC1-1CEFB81C4938}.Debug|Win32.Build.0 = Debug|Win32
+		{AE145A93-779B-420B-9DC1-1CEFB81C4938}.Release|Win32.ActiveCfg = Release|Win32
+		{AE145A93-779B-420B-9DC1-1CEFB81C4938}.Release|Win32.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
