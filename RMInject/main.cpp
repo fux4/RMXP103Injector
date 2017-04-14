@@ -51,11 +51,10 @@ HWND ButtonOkHwnd = NULL;
 HWND ButtonCancelHwnd = NULL;
 HWND PictureBoxHwnd = NULL;
 HWND hScroll = NULL;
+HWND ButtonShowHwnd = NULL;
 
 vector<string> fileList;
 vector<string> fullList;
-
-TCHAR L_TempBmpPath[MAX_PATH];   //这里被定义，保证MAX_PATH内存大小足够大
 
 void p(long v){
 	char c[10];
@@ -171,7 +170,7 @@ void updateView(HDC hdc){
 	for(unsigned int i=startIndex;i<startIndex+pageMax;i++){
 		if(i<tmpVar){
 			rect.top = 16+(i-startIndex)*lineHeight;
-			rect.bottom = rect.top + lineHeight-1;
+			rect.bottom = rect.top + lineHeight;
 			if(selIndex==i){
 				gPen=CreatePen(PS_DOT,1,RGB(206,149,58));
 				oPen=(HPEN)SelectObject(hdc,gPen);
@@ -199,6 +198,12 @@ void initializeUI(HDC hdc){
 	FrameRect(hdc,&rect,SYSTEM_COLOR);
 }
 
+void showFileInExplorer(string filename){
+	string order;
+	order.assign("/n, /select,").append(filename);
+	ShellExecuteW( NULL, _T("open"), _T("explorer.exe"), STRING2TCHAR(order), NULL, SW_SHOWNORMAL );
+}
+
 void createTools(HWND hwnd,WPARAM wParam, LPARAM lParam){
 	ButtonOkHwnd = ::CreateWindowEx(4,
 			L"Button", 
@@ -216,6 +221,14 @@ void createTools(HWND hwnd,WPARAM wParam, LPARAM lParam){
 			75, 21,
 			hwnd, NULL, hInstance, NULL);
 	SendMessage( ButtonCancelHwnd, WM_SETFONT, (WPARAM)font, MAKELONG(TRUE,0) );
+	ButtonShowHwnd = ::CreateWindowEx(4,
+			L"Button", 
+			TEXT ("在文件夹中显示"),
+			0x50010000,
+			14, 508,
+			300, 21,
+			hwnd, NULL, hInstance, NULL);
+	SendMessage( ButtonShowHwnd, WM_SETFONT, (WPARAM)font, MAKELONG(TRUE,0) );
 	HWND box2 = CreateWindowEx(0x204,
 			L"Static", 
 			TEXT (""),
@@ -236,18 +249,37 @@ void createTools(HWND hwnd,WPARAM wParam, LPARAM lParam){
 
 }
 
+void setIndexFocus(int index){
+	if(index<startIndex){
+		startIndex = index;
+		InvalidateRect(hScroll, NULL, false);
+		PostMessage(hScroll, WM_PAINT, 0, 0);
+	}
+	if(index>=startIndex+pageMax){
+		startIndex = index - pageMax + 1;
+		InvalidateRect(hScroll, NULL, false);
+		PostMessage(hScroll, WM_PAINT, 0, 0);
+	}
+}
+
+static int fux=0;
+
 LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)//消息的处理程序
- 
 {
     HDC hdc;
     PAINTSTRUCT ps;
 	int cx,cy;
+	WPARAM s_hibyte;
+	LPARAM s_lobyte;
+	unsigned long maxsize;
+	int findIndex;
+	wchar_t s_ch[6];
+	HWND hn = GetParent(hwnd);
     switch (message)
     {
 	case FUX2_SCROLL:
-		InvalidateRect(hwnd, &drawRect, false);
+		InvalidateRect(hwnd, &drawRect, true);
 		hdc = BeginPaint(hwnd, &ps);
-        FillRect(hdc,&drawRect,BACK_COLOR);
 		updateView(hdc);
         EndPaint (hwnd, &ps);
 		return 0;
@@ -256,12 +288,27 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)/
 		cy = GET_Y_LPARAM(lParam);
 		if(cx>=drawRect.left&&cx<=drawRect.right&&cy>=drawRect.top&&cy<=drawRect.bottom){
 			selIndex = startIndex + (cy-drawRect.top)/lineHeight;
-			InvalidateRect(hwnd, &drawRect, false);
+			InvalidateRect(hwnd, &drawRect, true);
 			hdc = BeginPaint(hwnd, &ps);
-			FillRect(hdc,&drawRect,BACK_COLOR);
 			updateView(hdc);
 			EndPaint (hwnd, &ps);
 			loadPicFromRM();
+		}
+		return 0;
+	case WM_CHAR:
+		findIndex = selIndex + 1;
+		maxsize = fileList.size();
+		while(findIndex!=selIndex){
+			if(fileList[findIndex].c_str()[0]==wParam){
+				selIndex = findIndex;
+				setIndexFocus(selIndex);
+				InvalidateRect(hwnd, &drawRect, true);
+				hdc = BeginPaint(hwnd, &ps);
+				updateView(hdc);
+				EndPaint (hwnd, &ps);
+				break;
+			}
+			findIndex = (findIndex + 1) % maxsize;
 		}
 		return 0;
 	case WM_LBUTTONDBLCLK:
@@ -277,14 +324,24 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)/
         hdc = BeginPaint(hwnd, &ps);
 		initializeUI(hdc);
 		updateView(hdc);
-        EndPaint (hwnd, &ps);
-        return 0 ;
+		loadPicFromRM();
+        EndPaint(hwnd, &ps);
+		
+		while(hn){
+			InvalidateRect(hn, NULL, false);
+			hn = GetParent(hn);
+			//PostMessage(hn, WM_PAINT, wParam, lParam);
+		}
+        return 0;
 	case WM_COMMAND:
 		if((HWND)lParam==ButtonOkHwnd){
 			isClickOk = true;
 			return DefWindowProc (hwnd, WM_CLOSE, wParam, lParam);
 		}else if((HWND)lParam==ButtonCancelHwnd){
 			return DefWindowProc (hwnd, WM_CLOSE, wParam, lParam);
+		}else if((HWND)lParam==ButtonShowHwnd){
+			if(selIndex>0) showFileInExplorer(fullList[selIndex]);
+			return 0;
 		}
 	case WM_KEYDOWN:
 		if(wParam==VK_ESCAPE)
@@ -344,7 +401,6 @@ void ClickHooker(){
 		lastIndex = fileList.size()-pageMax;
 
 		startIndex = getItemStartIndex(selIndex);
-		loadPicFromRM();
 		isClickOk = false;
 		HWND hwnd = ::CreateWindowEx(0x10501,
 			szWindowName, 
@@ -392,13 +448,21 @@ LRESULT CALLBACK scrollWndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lP
     static int dragState=0;
 	static int clickY=0;
 	static int clickIndex=0;
-
+	int s;
+	int v;
     int accumDelta;
     switch (message) {
     case WM_LBUTTONDOWN:
 		if(fileList.size()<=pageMax){ return 0;}
-		dragState = 1;
+		s = max(pageMax*scrollHeight/fileList.size(), 20);
+        v = min(startIndex*scrollHeight/fileList.size(),scrollHeight-s);
 		clickY = GET_Y_LPARAM(lParam);
+		if(clickY<v||clickY>v+s){
+			int offset = (clickY-s/2-v)*fileList.size();
+			startIndex = getItemStartIndex(startIndex+offset/scrollHeight);
+			PostMessage(GetParent(hwnd), FUX2_SCROLL, 0, 0);
+		}
+		dragState = 1;
 		clickIndex = startIndex;
 		PostMessage(hwnd, WM_PAINT, wParam, lParam);
 		InvalidateRect(hwnd, NULL, false);
@@ -451,8 +515,6 @@ LRESULT CALLBACK scrollWndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lP
         return 0;
     case WM_PAINT:
 		if (fileList.size()>pageMax) {
-			int s;
-			int v;
 			hdc = BeginPaint(hwnd, &ps);
 			GetClientRect(hwnd, &r);
 			HPEN gPen=CreatePen(PS_SOLID,1,RGB(0,0,0));
